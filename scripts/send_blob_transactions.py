@@ -20,7 +20,18 @@ def parse_args():
                       help='Recipient address (default: 0x25D5FA335D952FdCa821EE415de414C15Eb3eFAd)')
     parser.add_argument('--number-of-blobs', type=int, default=2,
                       help='Number of blobs to include in the transaction (default: 2)')
+    parser.add_argument('--fee-collector', type=str,
+                      default='0x1559000000000000000000000000000000000000',
+                      help='Fee collector address to track balance (default: 0x1559...)')
+    parser.add_argument('--log', action='store_true',
+                      help='Log the transaction hash and receipt')
     return parser.parse_args()
+
+def get_fee_collector_balance(args):
+    w3 = Web3(HTTPProvider(args.rpc_url))
+    balance = w3.eth.get_balance(args.fee_collector)
+    print(f"Fee collector balance: {balance} wei")
+    return balance
 
 def send_blob(args):
     w3 = Web3(HTTPProvider(args.rpc_url))
@@ -28,7 +39,8 @@ def send_blob(args):
     text = "<( o.O )>"
     encoded_text = abi.encode(["string"], [text])
 
-    print("Text:", encoded_text)
+    if args.log:
+        print("Text:", encoded_text)
 
     # Blob data must be comprised of 4096 32-byte field elements
     # So yeah, blobs must be pretty big
@@ -63,22 +75,30 @@ def send_blob(args):
             tx["gas"] = 1000000
 
     signed = acct.sign_transaction(tx, blobs=blobs)
-
-    print("Signed Transaction:", signed, "\n")
+    if args.log:
+        print("Signed Transaction:", signed, "\n")
 
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
-    print(f"Transaction hash: {tx_hash.hex()}")
+    if args.log:
+        print(f"Transaction hash: {tx_hash.hex()}")
 
     tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-    print(f"Tx receipt: {tx_receipt}")
+    if args.log:
+        print(f"Tx receipt: {tx_receipt}")
     print(f"Transaction included in block {tx_receipt.blockNumber}, status: {tx_receipt.status}")
-
 
 def main() -> int:
     args = parse_args()
-    send_blob(args)
+    # Get final balance and calculate difference
+    if args.fee_collector:
+        initial_balance = get_fee_collector_balance(args)
+        send_blob(args)
+        final_balance = get_fee_collector_balance(args)
+        balance_difference = final_balance - initial_balance
+        print(f"\nFee collector balance change: {balance_difference} wei")
+    else:
+        send_blob(args)
     return 0
-
 
 if __name__ == "__main__":
     main()
