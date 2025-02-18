@@ -3,6 +3,10 @@ import argparse
 from eth_abi import abi          # for encoding data into ABI format
 from eth_utils import to_hex     # for converting values to hex
 from web3 import Web3, HTTPProvider
+import hashlib
+import ckzg # type: ignore
+
+TRUSTED_SETUP = os.path.join(os.path.dirname(__file__), "trusted_setup.txt")
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Send blob transactions to Ethereum network')
@@ -51,7 +55,7 @@ def send_blob(args):
     acct = w3.eth.account.from_key(args.private_key)
 
     tx = {
-        "type": 3,
+        "type": "0x3",
         "chainId": w3.eth.chain_id,  # Anvil
         "from": acct.address,
         "to": args.to,
@@ -67,7 +71,9 @@ def send_blob(args):
         tx["gas"] = args.gas_limit
     else:
         try:
-            tx["gas"] = w3.eth.estimate_gas(tx)
+            tx_with_blobs = tx.copy()
+            tx_with_blobs["blobVersionedHashes"] = [b"\x01" + hashlib.sha256(ckzg.blob_to_kzg_commitment(blob, ckzg.load_trusted_setup(TRUSTED_SETUP, 0))).digest()[1:] for blob in blobs]
+            tx["gas"] = w3.eth.estimate_gas(tx_with_blobs)
             print(f"Estimated gas: {tx['gas']}")
         except Exception as e:
             print(f"Gas estimation failed: {e}")

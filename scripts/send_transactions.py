@@ -51,7 +51,7 @@ def send_transaction(args):
     if args.tx_type == '0x1':
         tx["gasPrice"] = args.gas_price
     else:  # EIP-1559 transaction (0x2)
-        tx["type"] = 2  # Explicitly set type for EIP-1559
+        tx["type"] = '0x2'  # Explicitly set type for EIP-1559
         tx["maxFeePerGas"] = args.max_fee
         tx["maxPriorityFeePerGas"] = args.max_priority_fee
 
