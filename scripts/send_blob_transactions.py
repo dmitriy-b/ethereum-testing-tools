@@ -29,6 +29,8 @@ def parse_args():
                       help='Fee collector address to track balance (default: 0x1559...)')
     parser.add_argument('--log', action='store_true',
                       help='Log the transaction hash and receipt')
+    parser.add_argument('--nonce', type=int,
+                      help='Specific nonce to use for the transaction (optional)')
     return parser.parse_args()
 
 def get_fee_collector_balance(args):
@@ -63,7 +65,7 @@ def send_blob(args):
         "maxFeePerGas": args.gas_price,
         "maxPriorityFeePerGas": args.gas_price,
         "maxFeePerBlobGas": to_hex(args.gas_price),
-        "nonce": w3.eth.get_transaction_count(acct.address),
+        "nonce": args.nonce if args.nonce is not None else w3.eth.get_transaction_count(acct.address),
     }
 
     # Use provided gas limit or estimate if not specified
