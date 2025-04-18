@@ -1,7 +1,8 @@
 # ethereum-testing-tools
+
 A list of scripts to test ethereum based blockchains
 
-# Ethereum Testing Tools
+## Ethereum Testing Tools
 
 A collection of useful tools for Ethereum testing and development.
 
@@ -12,6 +13,7 @@ The `scripts` directory contains a variety of tools for interacting with Ethereu
 ### Account Management
 
 #### generate_account.py
+
 Generate one or multiple Ethereum accounts.
 
 ```bash
@@ -26,6 +28,7 @@ Options:
 ```
 
 #### get_public_key.py
+
 Extract an Ethereum address from a private key.
 
 ```bash
@@ -35,6 +38,7 @@ python scripts/get_public_key.py [PRIVATE_KEY]
 ### Transaction Tools
 
 #### send_transactions.py
+
 Send regular transactions to Ethereum network.
 
 ```bash
@@ -55,6 +59,7 @@ Options:
 ```
 
 #### send_blob_transactions.py
+
 Send blob transactions to Ethereum network (EIP-4844).
 
 ```bash
@@ -73,6 +78,7 @@ Options:
 ```
 
 #### get_pending_transactions.py
+
 Get information about pending transactions.
 
 ```bash
@@ -88,6 +94,7 @@ Options:
 ### Transfer Tools
 
 #### transfer_eth.py
+
 Transfer ETH to one or multiple addresses.
 
 ```bash
@@ -103,6 +110,7 @@ Options:
 ```
 
 #### transfer_tokens.py
+
 Transfer ERC-20 tokens to one or multiple addresses.
 
 ```bash
@@ -121,6 +129,7 @@ Options:
 ### Validator Management
 
 #### consolidation.py
+
 Ethereum validator consolidation script for transferring stake from one validator to another (EIP-7251).
 
 ```bash
@@ -174,3 +183,33 @@ All log-related tools and scripts have been moved to the `logs` directory for be
 - Grafana logs downloader scripts
 - Test log files and jq scripts
 - Multi-instance logs downloader and error filter script
+
+## Work with docker
+
+### Build docker image
+
+```bash
+docker build -t ethereum-testing-tools .
+```
+
+### Run any script in docker container
+
+```bash
+docker run -it ethereum-testing-tools [script_name] [OPTIONS]
+```
+
+for example:
+
+```bash
+docker run -v $(PWD)/accounts:/app/accounts --rm ethereum-testing-tools:latest scripts/generate_account.py -n 10 -o ./accounts -p devnet --save-public
+```
+
+### Passing environment variables to docker container
+
+It is possible to use environment variables from .env file as arguments for the script. For this, you need to start container from `source .env && docker run --env-file=./.env` command.
+
+In the example below, the script will use the value of `NUMBER_OF_ACCOUNTS` environment variable from `.env` file as the number of accounts to generate.
+
+```bash
+source .env && docker run --env-file=./.env -v $(PWD)/accounts:/app/accounts --rm ethereum-testing-tools:latest scripts/generate_account.py -n $NUMBER_OF_ACCOUNTS -o ./accounts -p devnet --save-public
+```
