@@ -14,5 +14,5 @@ dependencies = [
     "pandas",
 ]
 
-[tool.uv]
-package = false
+[project.scripts]
+generate-account = "ethereum_testing_tools.generate_account:main"
