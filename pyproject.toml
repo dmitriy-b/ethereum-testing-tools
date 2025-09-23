@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ethereum-testing-tools"
 version = "0.1.0"
@@ -15,4 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-generate-account = "ethereum_testing_tools.generate_account:main"
+generate-account = "scripts.generate_account:main"
+
+[tool.setuptools]
+packages = ["scripts"]
