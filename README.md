@@ -6,6 +6,32 @@ A list of scripts to test ethereum based blockchains
 
 A collection of useful tools for Ethereum testing and development.
 
+## Quick Start with uv
+
+[`uv`](https://github.com/astral-sh/uv) resolves project dependencies on demand, letting you execute the scripts without setting up a virtualenv first.
+
+```bash
+uv run scripts/generate_account.py --help
+```
+
+To generate three accounts and save them locally:
+
+```bash
+uv run scripts/generate_account.py --num-accounts 3 --output-dir accounts
+```
+
+You can also launch the same script through `uvx` when you prefer an ephemeral environment:
+
+```bash
+uvx --from . python scripts/generate_account.py -- --num-accounts 3 --output-dir accounts
+```
+
+To execute script without cloning the repository, you can use `uvx` command.
+
+```bash
+uvx --from git+https://github.com/dmitriy-b/ethereum-testing-tools.git@main generate-account --num-accounts 3 --output-dir accounts
+```
+
 ## Scripts
 
 The `scripts` directory contains a variety of tools for interacting with Ethereum and related networks:
@@ -144,6 +170,7 @@ Options:
 ```
 
 #### voluntary_exits.py
+
 Submit a voluntary exit for an Ethereum validator.
 
 ```bash
@@ -160,6 +187,7 @@ Options:
 ```
 
 #### withdrawals.py
+
 Send withdrawal or voluntary exit to Ethereum contract.
 
 ```bash
