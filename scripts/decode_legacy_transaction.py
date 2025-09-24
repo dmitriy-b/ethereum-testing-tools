@@ -9,10 +9,14 @@ def print_transaction(path: str) -> None:
         tr = f.read()
     print(TypedTransaction.from_bytes(HexBytes(tr)).as_dict())  
 
-if __name__ == "__main__":
+
+def main() -> None:
     parser = argparse.ArgumentParser(description='Parse legacy transaction and print output')
     parser.add_argument('-f', '--transaction-file', 
                         type=str, 
                         help='Txt file with transaction hash')
     args = parser.parse_args()
     print_transaction(args.transaction_file)
+
+if __name__ == "__main__":
+    main()

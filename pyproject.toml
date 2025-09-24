@@ -20,6 +20,19 @@ dependencies = [
 
 [project.scripts]
 generate-account = "scripts.generate_account:main"
+repeat-command = "scripts.repeat_command:main"
+setup-blob-test = "scripts.setup_blob_test:main"
+consolidation = "scripts.consolidation:main"
+send-transactions = "scripts.send_transactions:main"
+transfer-tokens = "scripts.transfer_tokens:main"
+get-pending-transactions = "scripts.get_pending_transactions:main"
+compare-consensys = "scripts.compare_consensys:main"
+send-blob-transactions = "scripts.send_blob_transactions:main"
+transfer-eth = "scripts.transfer_eth:main"
+get-public-key = "scripts.get_public_key:main"
+decode-legacy-transaction = "scripts.decode_legacy_transaction:main"
+withdrawals = "scripts.withdrawals:main"
+voluntary-exits = "scripts.voluntary_exits:main"
 
 [tool.setuptools]
 packages = ["scripts"]

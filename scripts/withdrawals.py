@@ -143,7 +143,7 @@ def send_withdrawal(
         print(f"Error sending transaction: {e}")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='Send withdrawal or voluntary exit to Ethereum contract')
     parser.add_argument('--rpc-url', required=True, help='RPC URL for Ethereum node')
     parser.add_argument('--pubkey', required=True, help='Public key for withdrawal or exit')
@@ -224,3 +224,7 @@ if __name__ == "__main__":
         args.contract_address,
         bytes.fromhex(args.private_key.replace('0x', '')) if args.private_key else None,
     )
+
+
+if __name__ == "__main__":
+    main()

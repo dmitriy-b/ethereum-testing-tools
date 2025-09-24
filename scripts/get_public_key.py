@@ -13,7 +13,8 @@ def get_ethereum_address(private_key_hex):
     # Get the Ethereum address (which is derived from the public key)
     return account.address
 
-if __name__ == "__main__":
+
+def main() -> None:
     parser = argparse.ArgumentParser(description='Get Ethereum address from private key')
     parser.add_argument('private_key', help='Private key in hex format (with or without 0x prefix)')
     
@@ -24,3 +25,6 @@ if __name__ == "__main__":
         print(f"Ethereum Address: {address}")
     except Exception as e:
         print(f"Error: {str(e)}")
+
+if __name__ == "__main__":
+    main()

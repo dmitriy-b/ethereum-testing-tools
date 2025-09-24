@@ -97,7 +97,7 @@ def send_voluntary_exit(
         print(f"Error sending transaction: {e}")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='Submit a voluntary exit for an Ethereum validator')
     parser.add_argument('--rpc-url', required=True, help='RPC URL for Ethereum node')
     parser.add_argument('--pubkey', required=True, help='Public key of the validator')
@@ -177,4 +177,8 @@ if __name__ == "__main__":
         args.keystore_path,
         args.contract_address,
         bytes.fromhex(args.private_key.replace('0x', '')) if args.private_key else None,
-    ) 
+    )
+
+
+if __name__ == "__main__":
+    main() 
