@@ -29,8 +29,9 @@ uvx --from . python scripts/generate_account.py -- --num-accounts 3 --output-dir
 To execute script without cloning the repository, you can use `uvx` command.
 
 ```bash
-uvx --from git+https://github.com/dmitriy-b/ethereum-testing-tools.git@main generate-account --num-accounts 3 --output-dir accounts
+uvx --from git+https://github.com/dmitriy-b/ethereum-testing-tools.git@main scripts/generate_account.py --num-accounts 3 --output-dir accounts
 ```
+
 
 ## Scripts
 
@@ -170,7 +171,6 @@ Options:
 ```
 
 #### voluntary_exits.py
-
 Submit a voluntary exit for an Ethereum validator.
 
 ```bash
@@ -187,7 +187,6 @@ Options:
 ```
 
 #### withdrawals.py
-
 Send withdrawal or voluntary exit to Ethereum contract.
 
 ```bash
@@ -241,3 +240,57 @@ In the example below, the script will use the value of `NUMBER_OF_ACCOUNTS` envi
 ```bash
 source .env && docker run --env-file=./.env -v $(PWD)/accounts:/app/accounts --rm ethereum-testing-tools:latest scripts/generate_account.py -n $NUMBER_OF_ACCOUNTS -o ./accounts -p devnet --save-public
 ```
+
+## GitHub Action: Slack Report
+
+You can call the Slack report script from any repository using a reusable composite action hosted here.
+
+Run help directly via uvx without cloning:
+
+```bash
+uvx --from git+https://github.com/dmitriy-b/ethereum-testing-tools.git@main slack-report --help
+```
+
+Example workflow that posts a message to Slack:
+
+```yaml
+name: Slack Report Example
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+jobs:
+  slack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack report
+        uses: dmitriy-b/ethereum-testing-tools/.github/actions/slack-report@main
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          verdict: pass
+          description: "Auto tests"
+          version: "1.2.3"
+          report-link: "https://example.com/report"
+          summary: '{"total": 10, "passed": 10}'
+          timestamp: ${{ github.event.head_commit.timestamp }}
+          pipeline-link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          report-name: "report.json"
+          text: "Build finished"
+          additional-info: "Deployed to staging"
+          # Optional: pick a specific ref of this repo (branch/tag/sha). Default is main
+          ref: main
+```
+
+Inputs (mapped 1:1 to `slack-report` CLI):
+- **webhook-url (required)**: Slack Incoming Webhook URL
+- **verdict**: pass or fail (default: pass)
+- **description**: what report is about (default: Auto tests)
+- **version**: build/version string
+- **report-link**: link to human-readable report
+- **summary**: precomputed summary string (JSON). If omitted, the library function may infer it from `report-name` when used programmatically
+- **timestamp**: ISO-8601 timestamp
+- **pipeline-link**: CI job link
+- **report-name**: name of JSON file with test results
+- **text**: additional text before message
+- **additional-info**: any extra info shown in footer
+- **ref**: git ref of this repo for uvx to fetch (default: main)
