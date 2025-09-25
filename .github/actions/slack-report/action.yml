@@ -2,7 +2,7 @@ name: "Slack Report"
 description: "Send a Slack notification using ethereum-testing-tools slack-report script via uvx"
 
 inputs:
-  webhook-url:
+  webhook_url:
     description: "Slack Incoming Webhook URL"
     required: true
   verdict:
@@ -15,25 +15,25 @@ inputs:
   version:
     description: "Build or app version"
     required: false
-  report-link:
+  report_link:
     description: "Link to a human-readable report (e.g., Allure, Grafana, etc.)"
     required: false
   summary:
-    description: "Precomputed JSON summary string; if not provided, summary can be inferred from report-name file when used by library calls"
+    description: "Precomputed JSON summary string; if not provided, summary can be inferred from report_name file when used by library calls"
     required: false
   timestamp:
     description: "Timestamp to display (ISO-8601 string). If not provided, script or caller may compute it"
     required: false
-  pipeline-link:
+  pipeline_link:
     description: "CI job or pipeline link"
     required: false
-  report-name:
+  report_name:
     description: "Name of JSON file with test results (looked up by the script when summary is not provided)"
     required: false
   text:
     description: "Additional text placed before the attachments"
     required: false
-  additional-info:
+  additional_info:
     description: "Any other additional information shown in the footer"
     required: false
   ref:
@@ -59,17 +59,17 @@ runs:
       shell: bash
       env:
         REF: ${{ inputs.ref }}
-        WEBHOOK_URL: ${{ inputs["webhook-url"] }}
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
         VERDICT: ${{ inputs.verdict }}
         DESCRIPTION: ${{ inputs.description }}
         VERSION: ${{ inputs.version }}
-        REPORT_LINK: ${{ inputs["report-link"] }}
+        REPORT_LINK: ${{ inputs.report_link }}
         SUMMARY: ${{ inputs.summary }}
         TIMESTAMP: ${{ inputs.timestamp }}
-        PIPELINE_LINK: ${{ inputs["pipeline-link"] }}
-        REPORT_NAME: ${{ inputs["report-name"] }}
+        PIPELINE_LINK: ${{ inputs.pipeline_link }}
+        REPORT_NAME: ${{ inputs.report_name }}
         TEXT: ${{ inputs.text }}
-        ADDITIONAL_INFO: ${{ inputs["additional-info"] }}
+        ADDITIONAL_INFO: ${{ inputs.additional_info }}
       run: |
         set -euo pipefail
         cmd=(uvx --from "git+https://github.com/dmitriy-b/ethereum-testing-tools.git@${REF}" slack-report --webhook-url "$WEBHOOK_URL")
