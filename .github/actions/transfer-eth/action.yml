@@ -1,0 +1,73 @@
+name: "Transfer ETH"
+description: "Transfer ETH using ethereum-testing-tools transfer-eth via uvx"
+
+inputs:
+  from_key:
+    description: "Private key to send from (with 0x prefix)"
+    required: true
+  to:
+    description: "Single address to send to"
+    required: false
+  to_file:
+    description: "File containing addresses (one per line for .txt, or JSON format)"
+    required: false
+  amount:
+    description: "Amount of ETH to send to each address"
+    required: true
+  gas_price:
+    description: "Gas price in Gwei (optional)"
+    required: false
+  rpc_url:
+    description: "Custom RPC URL"
+    required: true
+  ref:
+    description: "Git ref of ethereum-testing-tools to run (branch, tag, or commit). Defaults to main"
+    required: false
+    default: "main"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Ensure uv is installed
+      id: install-uv
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v uv >/dev/null 2>&1; then
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        fi
+        uv --version
+
+    - name: Transfer ETH
+      shell: bash
+      env:
+        REF: ${{ inputs.ref }}
+        FROM_KEY: ${{ inputs.from_key }}
+        TO: ${{ inputs.to }}
+        TO_FILE: ${{ inputs.to_file }}
+        AMOUNT: ${{ inputs.amount }}
+        GAS_PRICE: ${{ inputs.gas_price }}
+        RPC_URL: ${{ inputs.rpc_url }}
+      run: |
+        set -euo pipefail
+        # Basic validation for mutually exclusive inputs
+        if [ -z "${TO:-}" ] && [ -z "${TO_FILE:-}" ]; then
+          echo "Error: Either 'to' or 'to_file' must be provided" >&2
+          exit 1
+        fi
+        if [ -n "${TO:-}" ] && [ -n "${TO_FILE:-}" ]; then
+          echo "Error: Cannot specify both 'to' and 'to_file'" >&2
+          exit 1
+        fi
+
+        cmd=(uvx --from "git+https://github.com/dmitriy-b/ethereum-testing-tools.git@${REF}" transfer-eth)
+        cmd+=(--from-key "$FROM_KEY")
+        if [ -n "${TO:-}" ]; then cmd+=(--to "$TO"); fi
+        if [ -n "${TO_FILE:-}" ]; then cmd+=(--to-file "$TO_FILE"); fi
+        cmd+=(--amount "$AMOUNT")
+        if [ -n "${GAS_PRICE:-}" ]; then cmd+=(--gas-price "$GAS_PRICE"); fi
+        cmd+=(--rpc-url "$RPC_URL")
+
+        echo "> Running: ${cmd[*]}"
+        "${cmd[@]}" 

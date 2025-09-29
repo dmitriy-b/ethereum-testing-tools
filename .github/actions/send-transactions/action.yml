@@ -1,0 +1,91 @@
+name: "Send Transactions"
+description: "Send Ethereum transactions using ethereum-testing-tools send-transactions via uvx"
+
+inputs:
+  rpc_url:
+    description: "RPC URL for the Ethereum node (e.g., http://127.0.0.1:8545)"
+    required: false
+  private_key:
+    description: "Private key for the sending account"
+    required: false
+  gas_price:
+    description: "Gas price in wei for legacy transactions (e.g., 1000000000 for 1 Gwei)"
+    required: false
+  max_fee:
+    description: "Max fee per gas in wei for EIP-1559 transactions (e.g., 1000000000 for 1 Gwei)"
+    required: false
+  max_priority_fee:
+    description: "Max priority fee per gas in wei for EIP-1559 transactions (e.g., 1000000000 for 1 Gwei)"
+    required: false
+  gas_limit:
+    description: "Gas limit for the transaction (if omitted, it may be estimated)"
+    required: false
+  to:
+    description: "Recipient address"
+    required: false
+  value:
+    description: "Amount of ETH to send in wei (e.g., 1000000000000000000 for 1 ETH)"
+    required: false
+  data:
+    description: "Transaction data in hex format"
+    required: false
+  tx_type:
+    description: "Transaction type: 0x1 (legacy) or 0x2 (EIP-1559)"
+    required: false
+  log:
+    description: "Whether to log the transaction hash and receipt (true/false)"
+    required: false
+    default: "false"
+  ref:
+    description: "Git ref of ethereum-testing-tools to run (branch, tag, or commit). Defaults to main"
+    required: false
+    default: "main"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Ensure uv is installed
+      id: install-uv
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v uv >/dev/null 2>&1; then
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        fi
+        uv --version
+
+    - name: Send transactions
+      shell: bash
+      env:
+        REF: ${{ inputs.ref }}
+        RPC_URL: ${{ inputs.rpc_url }}
+        PRIVATE_KEY: ${{ inputs.private_key }}
+        GAS_PRICE: ${{ inputs.gas_price }}
+        MAX_FEE: ${{ inputs.max_fee }}
+        MAX_PRIORITY_FEE: ${{ inputs.max_priority_fee }}
+        GAS_LIMIT: ${{ inputs.gas_limit }}
+        TO: ${{ inputs.to }}
+        VALUE: ${{ inputs.value }}
+        DATA: ${{ inputs.data }}
+        TX_TYPE: ${{ inputs.tx_type }}
+        LOG: ${{ inputs.log }}
+      run: |
+        set -euo pipefail
+        cmd=(uvx --from "git+https://github.com/dmitriy-b/ethereum-testing-tools.git@${REF}" send-transactions)
+        if [ -n "${RPC_URL:-}" ]; then cmd+=(--rpc-url "$RPC_URL"); fi
+        if [ -n "${PRIVATE_KEY:-}" ]; then cmd+=(--private-key "$PRIVATE_KEY"); fi
+        if [ -n "${GAS_PRICE:-}" ]; then cmd+=(--gas-price "$GAS_PRICE"); fi
+        if [ -n "${MAX_FEE:-}" ]; then cmd+=(--max-fee "$MAX_FEE"); fi
+        if [ -n "${MAX_PRIORITY_FEE:-}" ]; then cmd+=(--max-priority-fee "$MAX_PRIORITY_FEE"); fi
+        if [ -n "${GAS_LIMIT:-}" ]; then cmd+=(--gas-limit "$GAS_LIMIT"); fi
+        if [ -n "${TO:-}" ]; then cmd+=(--to "$TO"); fi
+        if [ -n "${VALUE:-}" ]; then cmd+=(--value "$VALUE"); fi
+        if [ -n "${DATA:-}" ]; then cmd+=(--data "$DATA"); fi
+        if [ -n "${TX_TYPE:-}" ]; then cmd+=(--tx-type "$TX_TYPE"); fi
+        case "${LOG:-}" in
+          true|True|TRUE|1|yes|y|on|On|ON) cmd+=(--log) ;;
+          *) ;; 
+        esac
+        echo "> Running: ${cmd[*]}"
+        "${cmd[@]}" 
