@@ -16,7 +16,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
 # Clone ethstaker-deposit-cli repository
-RUN git clone https://github.com/dmitriy-b/ethstaker-deposit-cli /app/ethstaker-deposit-cli
+RUN git clone https://github.com/ethstaker/ethstaker-deposit-cli.git /app/ethstaker-deposit-cli
 
 # Copy dependency manifests and install with uv
 COPY requirements.txt pyproject.toml ./

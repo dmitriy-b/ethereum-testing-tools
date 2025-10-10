@@ -282,6 +282,7 @@ jobs:
 ```
 
 Inputs (mapped 1:1 to `slack-report` CLI):
+
 - **webhook_url (required)**: Slack Incoming Webhook URL
 - **verdict**: pass or fail (default: pass)
 - **description**: what report is about (default: Auto tests)

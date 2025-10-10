@@ -1,0 +1,5 @@
+locust>=2.24.0
+web3>=6.15.0
+eth-account>=0.11.0
+eth-abi>=4.2.1
+ckzg>=0.0.1 
