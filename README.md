@@ -202,6 +202,21 @@ Options:
   --fund-account        Only display the account address that needs funding
 ```
 
+#### repeat_command.py
+
+Repeat a command multiple times with a delay between executions.
+
+```bash
+python scripts/repeat_command.py [OPTIONS]
+```
+
+Options:
+  --command             The command to execute (use quotes for commands with arguments). Use {REPLACE} for nonce replacement
+  -t, --times           Number of times to execute the command (default: 1)
+  -d, --delay           Delay in seconds between starting each command (default: 1.0)
+  --async               Execute commands asynchronously
+  -c, --concurrent      Maximum number of concurrent executions in async mode (default: 3)
+
 ## Logs Directory
 
 All log-related tools and scripts have been moved to the `logs` directory for better organization:
