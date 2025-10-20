@@ -1,0 +1,146 @@
+name: "Find Broken Commit via Docker"
+description: "Binary search through git commits to find which commit broke Docker container functionality"
+
+inputs:
+  date:
+    description: "Date when the app started failing (e.g., '2024-10-01'). Required."
+    required: true
+  docker_image:
+    description: "Docker image name and tag to build and test (e.g., 'myapp:bisect'). Required."
+    required: true
+  repo_url:
+    description: "Git repository URL to clone. If not provided, assumes already in a repository."
+    required: false
+    default: ""
+  repo_branch:
+    description: "Branch to checkout after cloning repository. If not provided, uses the default branch."
+    required: false
+    default: ""
+  repo_token:
+    description: "GitHub token for cloning private repositories. Use secrets.GITHUB_TOKEN for private repos."
+    required: false
+    default: ""
+  good_ref:
+    description: "Known good commit/branch reference. If not provided, searches from the date."
+    required: false
+    default: ""
+  bad_ref:
+    description: "Known bad commit/branch reference. Defaults to HEAD."
+    required: false
+    default: "HEAD"
+  docker_args:
+    description: "Arguments to pass to 'docker run' command (e.g., '--env KEY=value -p 8080:8080')"
+    required: false
+    default: ""
+  docker_build_context:
+    description: "Path to Docker build context (default: '.')"
+    required: false
+    default: "."
+  wait_time:
+    description: "Seconds to wait after container starts before checking logs (default: 30)"
+    required: false
+    default: "30"
+  error_string:
+    description: "String to search for in container logs that indicates failure (default: 'error')"
+    required: false
+    default: "error"
+
+outputs:
+  last_good_commit:
+    description: "The last commit that passed the test"
+    value: ${{ steps.bisect.outputs.last_good_commit }}
+  first_broken_commit:
+    description: "The first commit that failed the test"
+    value: ${{ steps.bisect.outputs.first_broken_commit }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Verify Docker is available
+      id: verify-docker
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v docker >/dev/null 2>&1; then
+          echo "::error::Docker is not installed or not available in PATH"
+          exit 1
+        fi
+        docker --version
+
+    - name: Verify Git is available
+      id: verify-git
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v git >/dev/null 2>&1; then
+          echo "::error::Git is not installed or not available in PATH"
+          exit 1
+        fi
+        git --version
+
+    - name: Run binary search for broken commit
+      id: bisect
+      shell: bash
+      env:
+        DATE: ${{ inputs.date }}
+        DOCKER_IMAGE: ${{ inputs.docker_image }}
+        REPO_URL: ${{ inputs.repo_url }}
+        REPO_BRANCH: ${{ inputs.repo_branch }}
+        REPO_TOKEN: ${{ inputs.repo_token }}
+        GOOD_REF: ${{ inputs.good_ref }}
+        BAD_REF: ${{ inputs.bad_ref }}
+        DOCKER_ARGS: ${{ inputs.docker_args }}
+        DOCKER_BUILD_CONTEXT: ${{ inputs.docker_build_context }}
+        WAIT_TIME: ${{ inputs.wait_time }}
+        ERROR_STRING: ${{ inputs.error_string }}
+      run: |
+        set -euo pipefail
+        
+        # Build the command with required arguments
+        cmd=("${{ github.action_path }}/find_broken_commit.sh")
+        cmd+=(--date "$DATE")
+        cmd+=(--docker-image "$DOCKER_IMAGE")
+        
+        # Add optional arguments if provided
+        if [ -n "${REPO_URL:-}" ]; then cmd+=(--repo-url "$REPO_URL"); fi
+        if [ -n "${REPO_BRANCH:-}" ]; then cmd+=(--repo-branch "$REPO_BRANCH"); fi
+        if [ -n "${REPO_TOKEN:-}" ]; then cmd+=(--repo-token "$REPO_TOKEN"); fi
+        if [ -n "${GOOD_REF:-}" ]; then cmd+=(--good-ref "$GOOD_REF"); fi
+        if [ -n "${BAD_REF:-}" ]; then cmd+=(--bad-ref "$BAD_REF"); fi
+        if [ -n "${DOCKER_ARGS:-}" ]; then cmd+=(--docker-args "$DOCKER_ARGS"); fi
+        if [ -n "${DOCKER_BUILD_CONTEXT:-}" ]; then cmd+=(--docker-build-context "$DOCKER_BUILD_CONTEXT"); fi
+        if [ -n "${WAIT_TIME:-}" ]; then cmd+=(--wait-time "$WAIT_TIME"); fi
+        if [ -n "${ERROR_STRING:-}" ]; then cmd+=(--error-string "$ERROR_STRING"); fi
+        
+        echo "::group::Running bisect command"
+        echo "> ${cmd[*]}"
+        echo "::endgroup::"
+        
+        # Run the script and capture output
+        "${cmd[@]}" 2>&1 | tee /tmp/bisect_output.log
+        
+        # Extract commit hashes from output if available
+        if grep -q "LAST GOOD COMMIT:" /tmp/bisect_output.log; then
+          LAST_GOOD=$(grep "LAST GOOD COMMIT:" /tmp/bisect_output.log | awk '{print $NF}')
+          echo "last_good_commit=$LAST_GOOD" >> "$GITHUB_OUTPUT"
+          echo "::notice::Last good commit: $LAST_GOOD"
+        fi
+        
+        if grep -q "FIRST BROKEN COMMIT:" /tmp/bisect_output.log; then
+          FIRST_BROKEN=$(grep "FIRST BROKEN COMMIT:" /tmp/bisect_output.log | awk '{print $NF}')
+          echo "first_broken_commit=$FIRST_BROKEN" >> "$GITHUB_OUTPUT"
+          echo "::error::First broken commit: $FIRST_BROKEN"
+        fi
+
+    - name: Upload logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: bisect-logs
+        path: |
+          /tmp/bisect_output.log
+          /tmp/commit_*_logs.txt
+          /tmp/docker_build.log
+        if-no-files-found: ignore
+        retention-days: 7
+
