@@ -9,15 +9,15 @@ description = "Utilities and scripts for testing Ethereum-based blockchains."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "web3==7.8.0",
-    "eth-utils==5.0.0",
-    "ckzg==2.0.1",
-    "requests==2.31.0",
+    "web3==7.14.0",
+    "eth-utils==5.3.1",
+    "ckzg==2.1.5",
+    "requests==2.32.5",
     "grafana-client==4.3.1",
-    "pyyaml",
+    "pyyaml==6.0.3",
     "pandas",
     "slackweb",
-    "loguru"
+    "loguru==0.7.3"
 ]
 
 [project.scripts]
@@ -28,6 +28,7 @@ send-transactions = "scripts.send_transactions:main"
 transfer-tokens = "scripts.transfer_tokens:main"
 get-pending-transactions = "scripts.get_pending_transactions:main"
 send-blob-transactions = "scripts.send_blob_transactions:main"
+send-blob-transactions-docker = "scripts.send_blob_transactions_docker:main"
 transfer-eth = "scripts.transfer_eth:main"
 get-public-key = "scripts.get_public_key:main"
 decode-legacy-transaction = "scripts.decode_legacy_transaction:main"

@@ -87,10 +87,29 @@ Options:
 
 #### send_blob_transactions.py
 
-Send blob transactions to Ethereum network (EIP-4844).
+Send blob transactions to Ethereum network (EIP-4844). Warning: Osaka fork not compatible yet.
 
 ```bash
 python scripts/send_blob_transactions.py [OPTIONS]
+
+Options:
+  --rpc-url             RPC URL for the Ethereum node (default: http://127.0.0.1:8545)
+  --private-key         Private key for the sending account
+  --gas-price           Gas price in wei (default: 1 Twei)
+  --gas-limit           Gas limit for the transaction (estimated if not specified)
+  --to                  Recipient address
+  --number-of-blobs     Number of blobs to include in the transaction (default: 2)
+  --fee-collector       Fee collector address to track balance
+  --log                 Log the transaction hash and receipt
+  --nonce               Specific nonce to use for the transaction (optional)
+```
+
+#### send_blob_transactions_docker.py
+
+Send blob transactions to Ethereum network (EIP-4844) using Nethermind Docker tool.
+
+```bash
+python scripts/send_blob_transactions_docker.py [OPTIONS]
 
 Options:
   --rpc-url             RPC URL for the Ethereum node (default: http://127.0.0.1:8545)
