@@ -26,6 +26,8 @@ def parse_args():
                       help='Transaction data in hex format (default: empty)')
     parser.add_argument('--tx-type', type=str, choices=['0x1', '0x2'], default='0x2',
                       help='Transaction type: 0x1 (legacy) or 0x2 (EIP-1559) (default: 0x2)')
+    parser.add_argument('--fee-collector', type=str,
+                      help='Fee collector address to track balance')
     parser.add_argument('--log', action='store_true',
                       help='Log the transaction hash and receipt')
     return parser.parse_args()
@@ -85,9 +87,25 @@ def send_transaction(args):
     print(f"Transaction included in block {tx_receipt.blockNumber}, status: {tx_receipt.status}")
     return tx_receipt
 
+def get_fee_collector_balance(args):
+    w3 = Web3(HTTPProvider(args.rpc_url))
+    balance = w3.eth.get_balance(args.fee_collector)
+    print(f"Fee collector balance: {balance} wei")
+    return balance
+
 def main() -> int:
     args = parse_args()
-    send_transaction(args)
+        # Get initial balance and calculate difference
+        # Get initial balance and calculate difference
+    if args.fee_collector:
+        initial_balance = get_fee_collector_balance(args)
+        send_transaction(args)
+        final_balance = get_fee_collector_balance(args)
+        balance_difference = final_balance - initial_balance
+        print(f"\nFee collector balance change: {balance_difference} wei")
+    else:
+        send_transaction(args)
+    
     return 0
 
 if __name__ == "__main__":
