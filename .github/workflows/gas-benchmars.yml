@@ -1,0 +1,37 @@
+name: Run gas benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Number of benchmark runs
+        required: false
+        default: 1
+
+jobs:
+  gas-benchmarks:
+    runs-on: ubuntu-latest # default runner; override to change VM
+
+    steps:
+      - name: Run gas-benchmarks composite action
+        uses: NethermindEth/gas-benchmarks/.github/actions/gas-benchmark-action@feat/gas-benchmark-workflow
+        with:
+          # Benchmark configuration (all optional, with sensible defaults)
+          testPath: eest_tests
+          genesisFile: zkevmgenesis.json
+          warmupFile: warmup/warmup-1000bl-16wi-24tx.txt
+          clients: nethermind,geth,reth,besu,erigon,nimbus,ethrex
+          runs: ${{ github.event.inputs.runs }}
+          opcodeWarmupCount: '1'
+          filter: ''
+          images: '{"nethermind":"default","geth":"default","reth":"default","erigon":"default","besu":"default","nimbus":"default","ethrex":"default"}'
+
+          # PostgreSQL target (no DB is provisioned by this workflow)
+          postgresHost: perfnet.core.nethermind.dev
+          postgresPort: '5432'
+          postgresDbName: monitoring
+          postgresTable: gas_benchmarks_ci
+
+          # DB credentials passed from your repository secrets
+          postgresUser: ${{ secrets.PERFNET_DB_USER }}
+          postgresPassword: ${{ secrets.PERFNET_DB_PASSWORD }}
