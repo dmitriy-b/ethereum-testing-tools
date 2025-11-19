@@ -18,7 +18,7 @@ jobs:
         with:
           # Benchmark configuration (all optional, with sensible defaults)
           testPath: eest_tests
-          genesisFile: scripts/genesisfiles/zkevmgenesis.json
+          genesisFile: zkevmgenesis.json
           warmupFile: warmup/warmup-1000bl-16wi-24tx.txt
           clients: nethermind
           runs: ${{ github.event.inputs.runs }}
