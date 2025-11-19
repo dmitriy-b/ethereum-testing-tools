@@ -20,7 +20,7 @@ jobs:
           testPath: eest_tests
           genesisFile: zkevmgenesis.json
           warmupFile: warmup/warmup-1000bl-16wi-24tx.txt
-          clients: nethermind,geth,reth,besu,erigon,nimbus,ethrex
+          clients: nethermind
           runs: ${{ github.event.inputs.runs }}
           opcodeWarmupCount: '1'
           filter: ''
