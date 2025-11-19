@@ -18,7 +18,7 @@ jobs:
         with:
           # Benchmark configuration (all optional, with sensible defaults)
           testPath: eest_tests
-          genesisFile: zkevmgenesis.json
+          genesisFile: scripts/genesisfiles/zkevmgenesis.json
           warmupFile: warmup/warmup-1000bl-16wi-24tx.txt
           clients: nethermind
           runs: ${{ github.event.inputs.runs }}
@@ -27,7 +27,7 @@ jobs:
           images: '{"nethermind":"default","geth":"default","reth":"default","erigon":"default","besu":"default","nimbus":"default","ethrex":"default"}'
 
           # PostgreSQL target (no DB is provisioned by this workflow)
-          postgresHost: perfnet.core.nethermind.dev
+          postgresHost: ''
           postgresPort: '5432'
           postgresDbName: monitoring
           postgresTable: gas_benchmarks_ci
