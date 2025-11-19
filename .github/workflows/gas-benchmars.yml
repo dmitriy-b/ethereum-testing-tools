@@ -17,9 +17,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NethermindEth/gas-benchmarks
-          lfs: true
+          ref: feat/gas-benchmark-workflow  # <--- IMPORTANT: Specify the branch/tag you want!
+          lfs: true                         # <--- Keeps LFS files correct
+
       - name: Run gas-benchmarks composite action
-        uses: NethermindEth/gas-benchmarks/.github/actions/gas-benchmark-action@feat/gas-benchmark-workflow
+        uses: ./.github/actions/gas-benchmark-action  # <--- CHANGED: Use local path
         with:
           # Benchmark configuration (all optional, with sensible defaults)
           testPath: eest_tests
