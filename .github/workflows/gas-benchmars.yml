@@ -13,6 +13,11 @@ jobs:
     runs-on: ubuntu-latest # default runner; override to change VM
 
     steps:
+      - name: Checkout gas-benchmarks repository
+        uses: actions/checkout@v4
+        with:
+          repository: NethermindEth/gas-benchmarks
+          lfs: true
       - name: Run gas-benchmarks composite action
         uses: NethermindEth/gas-benchmarks/.github/actions/gas-benchmark-action@feat/gas-benchmark-workflow
         with:
