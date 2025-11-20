@@ -23,18 +23,10 @@ on:
         description: Comma-separated list of clients to test
         required: false
         default: 'nethermind'
-      opcodeWarmupCount:
-        description: Number of opcode warmup iterations
-        required: false
-        default: '1'
       filter:
         description: Test filter pattern
         required: false
         default: ''
-      images:
-        description: JSON object mapping client names to image tags
-        required: false
-        default: '{"nethermind":"default","geth":"default","reth":"default","erigon":"default","besu":"default","nimbus":"default","ethrex":"default"}'
       postgresHost:
         description: PostgreSQL host
         required: false
@@ -73,9 +65,9 @@ jobs:
           warmupFile: ${{ github.event.inputs.warmupFile }}
           clients: ${{ github.event.inputs.clients }}
           runs: ${{ github.event.inputs.runs }}
-          opcodeWarmupCount: ${{ github.event.inputs.opcodeWarmupCount }}
+          opcodeWarmupCount: '1'
           filter: ${{ github.event.inputs.filter }}
-          images: ${{ github.event.inputs.images }}
+          images: '{"nethermind":"default","geth":"default","reth":"default","erigon":"default","besu":"default","nimbus":"default","ethrex":"default"}'
 
           # PostgreSQL target (no DB is provisioned by this workflow)
           postgresHost: ${{ github.event.inputs.postgresHost }}
