@@ -6,7 +6,51 @@ on:
       runs:
         description: Number of benchmark runs
         required: false
-        default: 1
+        default: '1'
+      testPath:
+        description: Path to test files
+        required: false
+        default: 'eest_tests'
+      genesisFile:
+        description: Genesis file to use
+        required: false
+        default: 'zkevmgenesis.json'
+      warmupFile:
+        description: Warmup file path
+        required: false
+        default: 'warmup/warmup-1000bl-16wi-24tx.txt'
+      clients:
+        description: Comma-separated list of clients to test
+        required: false
+        default: 'nethermind'
+      opcodeWarmupCount:
+        description: Number of opcode warmup iterations
+        required: false
+        default: '1'
+      filter:
+        description: Test filter pattern
+        required: false
+        default: ''
+      images:
+        description: JSON object mapping client names to image tags
+        required: false
+        default: '{"nethermind":"default","geth":"default","reth":"default","erigon":"default","besu":"default","nimbus":"default","ethrex":"default"}'
+      postgresHost:
+        description: PostgreSQL host
+        required: false
+        default: ''
+      postgresPort:
+        description: PostgreSQL port
+        required: false
+        default: '5432'
+      postgresDbName:
+        description: PostgreSQL database name
+        required: false
+        default: 'monitoring'
+      postgresTable:
+        description: PostgreSQL table name
+        required: false
+        default: 'gas_benchmarks_ci'
 
 jobs:
   gas-benchmarks:
@@ -24,20 +68,20 @@ jobs:
         uses: ./.github/actions/gas-benchmark-action  # <--- CHANGED: Use local path
         with:
           # Benchmark configuration (all optional, with sensible defaults)
-          testPath: eest_tests
-          genesisFile: zkevmgenesis.json
-          warmupFile: warmup/warmup-1000bl-16wi-24tx.txt
-          clients: nethermind
+          testPath: ${{ github.event.inputs.testPath }}
+          genesisFile: ${{ github.event.inputs.genesisFile }}
+          warmupFile: ${{ github.event.inputs.warmupFile }}
+          clients: ${{ github.event.inputs.clients }}
           runs: ${{ github.event.inputs.runs }}
-          opcodeWarmupCount: '1'
-          filter: ''
-          images: '{"nethermind":"default","geth":"default","reth":"default","erigon":"default","besu":"default","nimbus":"default","ethrex":"default"}'
+          opcodeWarmupCount: ${{ github.event.inputs.opcodeWarmupCount }}
+          filter: ${{ github.event.inputs.filter }}
+          images: ${{ github.event.inputs.images }}
 
           # PostgreSQL target (no DB is provisioned by this workflow)
-          postgresHost: ''
-          postgresPort: '5432'
-          postgresDbName: monitoring
-          postgresTable: gas_benchmarks_ci
+          postgresHost: ${{ github.event.inputs.postgresHost }}
+          postgresPort: ${{ github.event.inputs.postgresPort }}
+          postgresDbName: ${{ github.event.inputs.postgresDbName }}
+          postgresTable: ${{ github.event.inputs.postgresTable }}
 
           # DB credentials passed from your repository secrets
           postgresUser: ${{ secrets.PERFNET_DB_USER }}
