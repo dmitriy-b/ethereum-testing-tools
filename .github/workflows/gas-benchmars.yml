@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NethermindEth/gas-benchmarks
-          ref: feat/gas-benchmark-workflow  # <--- IMPORTANT: Specify the branch/tag you want!
+          ref: main                         # <--- IMPORTANT: Specify the branch/tag you want!
           lfs: true                         # <--- Keeps LFS files correct
 
       - name: Run gas-benchmarks composite action
