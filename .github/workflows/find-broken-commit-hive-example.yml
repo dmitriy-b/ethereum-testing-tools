@@ -7,24 +7,48 @@ on:
         description: 'Date when it started failing (YYYY-MM-DD)'
         required: true
         default: '2024-10-01'
-      hive_command:
-        description: 'Hive command to run'
+      client_repo_url:
+        description: 'Client repository URL to bisect'
         required: true
-        default: './hive --client nethermind --sim ethereum/engine --sim.limit /AccountRange'
-      repo_url:
+        default: 'https://github.com/NethermindEth/nethermind.git'
+      client_repo_branch:
+        description: 'Client branch to test'
+        required: false
+        default: 'master'
+      client_name:
+        description: 'Client name for Hive (nethermind, geth, besu, etc.)'
+        required: false
+        default: 'nethermind'
+      docker_image:
+        description: 'Docker image name to build'
+        required: false
+        default: 'nethermind:bisect'
+      docker_build_context:
+        description: 'Docker build context path'
+        required: false
+        default: '.'
+      dockerfile:
+        description: 'Dockerfile path (empty for auto-detect)'
+        required: false
+        default: ''
+      hive_command:
+        description: 'Hive command to run (without --client-file)'
+        required: true
+        default: './hive --sim ethereum/engine --sim.limit /AccountRange'
+      hive_repo_url:
         description: 'Hive repository URL'
         required: false
         default: 'https://github.com/ethereum/hive.git'
-      repo_branch:
-        description: 'Hive branch to test'
+      hive_branch:
+        description: 'Hive branch'
         required: false
         default: 'master'
       good_ref:
-        description: 'Known good commit (optional)'
+        description: 'Known good commit in client repo (optional)'
         required: false
         default: ''
       bad_ref:
-        description: 'Known bad commit (default: HEAD)'
+        description: 'Known bad commit in client repo (default: HEAD)'
         required: false
         default: 'HEAD'
       error_string:
@@ -51,8 +75,14 @@ jobs:
         with:
           date: ${{ github.event.inputs.date }}
           hive_command: ${{ github.event.inputs.hive_command }}
-          repo_url: ${{ github.event.inputs.repo_url }}
-          repo_branch: ${{ github.event.inputs.repo_branch }}
+          client_repo_url: ${{ github.event.inputs.client_repo_url }}
+          client_repo_branch: ${{ github.event.inputs.client_repo_branch }}
+          client_name: ${{ github.event.inputs.client_name }}
+          docker_image: ${{ github.event.inputs.docker_image }}
+          docker_build_context: ${{ github.event.inputs.docker_build_context }}
+          dockerfile: ${{ github.event.inputs.dockerfile }}
+          hive_repo_url: ${{ github.event.inputs.hive_repo_url }}
+          hive_branch: ${{ github.event.inputs.hive_branch }}
           good_ref: ${{ github.event.inputs.good_ref }}
           bad_ref: ${{ github.event.inputs.bad_ref }}
           error_string: ${{ github.event.inputs.error_string }}
@@ -64,9 +94,10 @@ jobs:
           echo "## Hive Bisect Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Repository: ${{ github.event.inputs.repo_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Branch: ${{ github.event.inputs.repo_branch }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Command: \`${{ github.event.inputs.hive_command }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Client Repository: ${{ github.event.inputs.client_repo_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Client Branch: ${{ github.event.inputs.client_repo_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Client Name: ${{ github.event.inputs.client_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Hive Command: \`${{ github.event.inputs.hive_command }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Date: ${{ github.event.inputs.date }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
@@ -76,15 +107,19 @@ jobs:
           if [ -n "${{ steps.find-broken.outputs.first_broken_commit }}" ]; then
             echo "❌ **First Broken Commit:** \`${{ steps.find-broken.outputs.first_broken_commit }}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**View the breaking commit:** https://github.com/ethereum/hive/commit/${{ steps.find-broken.outputs.first_broken_commit }}" >> $GITHUB_STEP_SUMMARY
+            # Extract repo name for link
+            REPO_URL="${{ github.event.inputs.client_repo_url }}"
+            REPO_URL="${REPO_URL%.git}"
+            echo "**View the breaking commit:** ${REPO_URL}/commit/${{ steps.find-broken.outputs.first_broken_commit }}" >> $GITHUB_STEP_SUMMARY
           fi
       
-      - name: Create issue on failure
-        if: failure() && steps.find-broken.outputs.first_broken_commit
+      - name: Create issue on finding broken commit
+        if: always() && steps.find-broken.outputs.first_broken_commit
         uses: actions/github-script@v7
         with:
           script: |
-            const title = `🔍 Hive test regression found: ${context.sha.substring(0, 7)}`;
+            const repoUrl = '${{ github.event.inputs.client_repo_url }}'.replace('.git', '');
+            const title = `🔍 Hive test regression found in ${{ github.event.inputs.client_name }}`;
             const body = `## Hive Test Regression Found
             
             A binary search identified the commit that broke Hive tests.
@@ -94,26 +129,26 @@ jobs:
             - ❌ **First Broken Commit:** \`${{ steps.find-broken.outputs.first_broken_commit }}\`
             
             ### Configuration
-            - **Repository:** ${{ github.event.inputs.repo_url }}
-            - **Branch:** ${{ github.event.inputs.repo_branch }}
-            - **Command:** \`${{ github.event.inputs.hive_command }}\`
+            - **Client Repository:** ${{ github.event.inputs.client_repo_url }}
+            - **Client Branch:** ${{ github.event.inputs.client_repo_branch }}
+            - **Client Name:** ${{ github.event.inputs.client_name }}
+            - **Hive Command:** \`${{ github.event.inputs.hive_command }}\`
             - **Date:** ${{ github.event.inputs.date }}
             
             ### Links
-            - [View the breaking commit](https://github.com/ethereum/hive/commit/${{ steps.find-broken.outputs.first_broken_commit }})
+            - [View the breaking commit](${repoUrl}/commit/${{ steps.find-broken.outputs.first_broken_commit }})
             - [Workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             `;
             
-            // Uncomment to automatically create an issue
-            // github.rest.issues.create({
+            console.log('=== BISECT RESULTS ===');
+            console.log(title);
+            console.log(body);
+            
+            // Uncomment to automatically create an issue:
+            // await github.rest.issues.create({
             //   owner: context.repo.owner,
             //   repo: context.repo.repo,
             //   title: title,
             //   body: body,
             //   labels: ['hive', 'regression', 'automated']
             // });
-            
-            console.log('Issue that would be created:');
-            console.log(title);
-            console.log(body);
-

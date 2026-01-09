@@ -1,19 +1,42 @@
 name: "Find Broken Commit via Hive Tests"
-description: "Binary search through git commits to find which commit broke Hive test suite"
+description: "Binary search through client commits to find which commit broke Hive test suite"
 
 inputs:
   date:
     description: "Date when the tests started failing (e.g., '2024-10-01'). Required."
     required: true
   hive_command:
-    description: "Hive command to run (e.g., './hive --client nethermind --sim ethereum/engine'). Required."
+    description: "Hive command to run WITHOUT --client-file (e.g., './hive --sim ethereum/engine'). Required."
     required: true
-  repo_url:
-    description: "Git repository URL to clone. Defaults to ethereum/hive."
+  client_repo_url:
+    description: "Client repository URL to bisect (e.g., 'https://github.com/NethermindEth/nethermind.git'). Required."
+    required: true
+  client_repo_branch:
+    description: "Client branch to test."
+    required: false
+    default: "master"
+  client_name:
+    description: "Client name for Hive (nethermind, geth, besu, etc.)."
+    required: false
+    default: "nethermind"
+  docker_image:
+    description: "Docker image name to build for the client."
+    required: false
+    default: "nethermind:bisect"
+  docker_build_context:
+    description: "Docker build context path relative to client repo root."
+    required: false
+    default: "."
+  dockerfile:
+    description: "Dockerfile path relative to client repo root (auto-detect if empty)."
+    required: false
+    default: ""
+  hive_repo_url:
+    description: "Hive repository URL."
     required: false
     default: "https://github.com/ethereum/hive.git"
-  repo_branch:
-    description: "Branch to checkout after cloning repository."
+  hive_branch:
+    description: "Hive branch to use."
     required: false
     default: "master"
   repo_token:
@@ -21,11 +44,11 @@ inputs:
     required: false
     default: ""
   good_ref:
-    description: "Known good commit/branch reference. If not provided, searches from the date."
+    description: "Known good commit/branch reference in client repo. If not provided, searches from the date."
     required: false
     default: ""
   bad_ref:
-    description: "Known bad commit/branch reference. Defaults to HEAD."
+    description: "Known bad commit/branch reference in client repo. Defaults to HEAD."
     required: false
     default: "HEAD"
   success_string:
@@ -41,7 +64,7 @@ inputs:
     required: false
     default: "3600"
   go_version:
-    description: "Go version to use (default: stable)"
+    description: "Go version to use for building Hive (default: stable)"
     required: false
     default: "stable"
 
@@ -98,8 +121,14 @@ runs:
       env:
         DATE: ${{ inputs.date }}
         HIVE_COMMAND: ${{ inputs.hive_command }}
-        REPO_URL: ${{ inputs.repo_url }}
-        REPO_BRANCH: ${{ inputs.repo_branch }}
+        CLIENT_REPO_URL: ${{ inputs.client_repo_url }}
+        CLIENT_REPO_BRANCH: ${{ inputs.client_repo_branch }}
+        CLIENT_NAME: ${{ inputs.client_name }}
+        DOCKER_IMAGE: ${{ inputs.docker_image }}
+        DOCKER_BUILD_CONTEXT: ${{ inputs.docker_build_context }}
+        DOCKERFILE: ${{ inputs.dockerfile }}
+        HIVE_REPO_URL: ${{ inputs.hive_repo_url }}
+        HIVE_BRANCH: ${{ inputs.hive_branch }}
         REPO_TOKEN: ${{ inputs.repo_token }}
         GOOD_REF: ${{ inputs.good_ref }}
         BAD_REF: ${{ inputs.bad_ref }}
@@ -116,10 +145,16 @@ runs:
         cmd=("${{ github.action_path }}/find_broken_commit_hive.sh")
         cmd+=(--date "$DATE")
         cmd+=(--hive-command "$HIVE_COMMAND")
+        cmd+=(--client-repo-url "$CLIENT_REPO_URL")
         
         # Add optional arguments if provided
-        if [ -n "${REPO_URL:-}" ]; then cmd+=(--repo-url "$REPO_URL"); fi
-        if [ -n "${REPO_BRANCH:-}" ]; then cmd+=(--repo-branch "$REPO_BRANCH"); fi
+        if [ -n "${CLIENT_REPO_BRANCH:-}" ]; then cmd+=(--client-repo-branch "$CLIENT_REPO_BRANCH"); fi
+        if [ -n "${CLIENT_NAME:-}" ]; then cmd+=(--client-name "$CLIENT_NAME"); fi
+        if [ -n "${DOCKER_IMAGE:-}" ]; then cmd+=(--docker-image "$DOCKER_IMAGE"); fi
+        if [ -n "${DOCKER_BUILD_CONTEXT:-}" ]; then cmd+=(--docker-build-context "$DOCKER_BUILD_CONTEXT"); fi
+        if [ -n "${DOCKERFILE:-}" ]; then cmd+=(--dockerfile "$DOCKERFILE"); fi
+        if [ -n "${HIVE_REPO_URL:-}" ]; then cmd+=(--hive-repo-url "$HIVE_REPO_URL"); fi
+        if [ -n "${HIVE_BRANCH:-}" ]; then cmd+=(--hive-branch "$HIVE_BRANCH"); fi
         if [ -n "${REPO_TOKEN:-}" ]; then cmd+=(--repo-token "$REPO_TOKEN"); fi
         if [ -n "${GOOD_REF:-}" ]; then cmd+=(--good-ref "$GOOD_REF"); fi
         if [ -n "${BAD_REF:-}" ]; then cmd+=(--bad-ref "$BAD_REF"); fi
@@ -155,8 +190,8 @@ runs:
         path: |
           /tmp/bisect_output.log
           /tmp/commit_*_logs.txt
-          /tmp/go_build.log
-          /tmp/go_get.log
+          /tmp/docker_build_*.log
+          /tmp/hive_go_build.log
+          /tmp/hive_go_get.log
         if-no-files-found: ignore
         retention-days: 7
-
