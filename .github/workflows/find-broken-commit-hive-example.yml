@@ -8,7 +8,7 @@ on:
         required: true
         default: '2024-10-01'
       client_repo_url:
-        description: 'Client repository URL to bisect'
+        description: 'Client GitHub repository URL to bisect'
         required: true
         default: 'https://github.com/NethermindEth/nethermind.git'
       client_repo_branch:
@@ -19,18 +19,6 @@ on:
         description: 'Client name for Hive (nethermind, geth, besu, etc.)'
         required: false
         default: 'nethermind'
-      docker_image:
-        description: 'Docker image name to build'
-        required: false
-        default: 'nethermind:bisect'
-      docker_build_context:
-        description: 'Docker build context path'
-        required: false
-        default: '.'
-      dockerfile:
-        description: 'Dockerfile path (empty for auto-detect)'
-        required: false
-        default: ''
       hive_command:
         description: 'Hive command to run (without --client-file)'
         required: true
@@ -78,9 +66,6 @@ jobs:
           client_repo_url: ${{ github.event.inputs.client_repo_url }}
           client_repo_branch: ${{ github.event.inputs.client_repo_branch }}
           client_name: ${{ github.event.inputs.client_name }}
-          docker_image: ${{ github.event.inputs.docker_image }}
-          docker_build_context: ${{ github.event.inputs.docker_build_context }}
-          dockerfile: ${{ github.event.inputs.dockerfile }}
           hive_repo_url: ${{ github.event.inputs.hive_repo_url }}
           hive_branch: ${{ github.event.inputs.hive_branch }}
           good_ref: ${{ github.event.inputs.good_ref }}

@@ -9,7 +9,7 @@ inputs:
     description: "Hive command to run WITHOUT --client-file (e.g., './hive --sim ethereum/engine'). Required."
     required: true
   client_repo_url:
-    description: "Client repository URL to bisect (e.g., 'https://github.com/NethermindEth/nethermind.git'). Required."
+    description: "Client GitHub repository URL to bisect (e.g., 'https://github.com/NethermindEth/nethermind.git'). Required."
     required: true
   client_repo_branch:
     description: "Client branch to test."
@@ -19,18 +19,6 @@ inputs:
     description: "Client name for Hive (nethermind, geth, besu, etc.)."
     required: false
     default: "nethermind"
-  docker_image:
-    description: "Docker image name to build for the client."
-    required: false
-    default: "nethermind:bisect"
-  docker_build_context:
-    description: "Docker build context path relative to client repo root."
-    required: false
-    default: "."
-  dockerfile:
-    description: "Dockerfile path relative to client repo root (auto-detect if empty)."
-    required: false
-    default: ""
   hive_repo_url:
     description: "Hive repository URL."
     required: false
@@ -124,9 +112,6 @@ runs:
         CLIENT_REPO_URL: ${{ inputs.client_repo_url }}
         CLIENT_REPO_BRANCH: ${{ inputs.client_repo_branch }}
         CLIENT_NAME: ${{ inputs.client_name }}
-        DOCKER_IMAGE: ${{ inputs.docker_image }}
-        DOCKER_BUILD_CONTEXT: ${{ inputs.docker_build_context }}
-        DOCKERFILE: ${{ inputs.dockerfile }}
         HIVE_REPO_URL: ${{ inputs.hive_repo_url }}
         HIVE_BRANCH: ${{ inputs.hive_branch }}
         REPO_TOKEN: ${{ inputs.repo_token }}
@@ -150,9 +135,6 @@ runs:
         # Add optional arguments if provided
         if [ -n "${CLIENT_REPO_BRANCH:-}" ]; then cmd+=(--client-repo-branch "$CLIENT_REPO_BRANCH"); fi
         if [ -n "${CLIENT_NAME:-}" ]; then cmd+=(--client-name "$CLIENT_NAME"); fi
-        if [ -n "${DOCKER_IMAGE:-}" ]; then cmd+=(--docker-image "$DOCKER_IMAGE"); fi
-        if [ -n "${DOCKER_BUILD_CONTEXT:-}" ]; then cmd+=(--docker-build-context "$DOCKER_BUILD_CONTEXT"); fi
-        if [ -n "${DOCKERFILE:-}" ]; then cmd+=(--dockerfile "$DOCKERFILE"); fi
         if [ -n "${HIVE_REPO_URL:-}" ]; then cmd+=(--hive-repo-url "$HIVE_REPO_URL"); fi
         if [ -n "${HIVE_BRANCH:-}" ]; then cmd+=(--hive-branch "$HIVE_BRANCH"); fi
         if [ -n "${REPO_TOKEN:-}" ]; then cmd+=(--repo-token "$REPO_TOKEN"); fi
@@ -190,7 +172,6 @@ runs:
         path: |
           /tmp/bisect_output.log
           /tmp/commit_*_logs.txt
-          /tmp/docker_build_*.log
           /tmp/hive_go_build.log
           /tmp/hive_go_get.log
         if-no-files-found: ignore

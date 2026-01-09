@@ -39,11 +39,10 @@ cleanup_and_exit() {
     local exit_code=$?
     log_info "Cleaning up..."
 
-    # Cleanup Docker images
-    if [ -n "$DOCKER_IMAGE_NAME" ]; then
-        log_info "Cleaning up Docker image: $DOCKER_IMAGE_NAME"
-        docker rmi -f "$DOCKER_IMAGE_NAME" 2>/dev/null || true
-    fi
+    # Cleanup Docker images built by Hive
+    log_info "Cleaning up Hive-built Docker images..."
+    docker images --filter "reference=hive/clients/*" -q | xargs -r docker rmi -f 2>/dev/null || true
+    docker images --filter "reference=hive/simulators/*" -q | xargs -r docker rmi -f 2>/dev/null || true
 
     if [ -n "$ORIGINAL_BRANCH" ] && [ -d "$CLIENT_REPO_DIR" ]; then
         cd "$CLIENT_REPO_DIR"
@@ -133,102 +132,60 @@ setup_hive() {
     log_success "Hive setup complete at $HIVE_DIR"
 }
 
-# Function to create hive config for custom client image
+# Function to create hive config for custom client
 create_hive_config() {
     local client_name=$1
-    local docker_image=$2
+    local github_repo=$2
+    local commit_hash=$3
     local config_file="$HIVE_DIR/configs/custom_client.yaml"
 
-    log_info "Creating Hive config for client: $client_name with image: $docker_image"
-
-    # Extract image name and tag
-    local baseimage="${docker_image%:*}"
-    local tag="${docker_image##*:}"
-    if [ "$baseimage" = "$docker_image" ]; then
-        tag="latest"
-    fi
+    log_info "Creating Hive config for client: $client_name"
+    log_info "  GitHub repo: $github_repo"
+    log_info "  Commit/tag: $commit_hash"
 
     cat > "$config_file" << EOF
 - client: $client_name
   dockerfile: git
   build_args:
-    baseimage: $baseimage
-    tag: $tag
+    github: $github_repo
+    tag: $commit_hash
 EOF
 
     log_info "Created config file: $config_file"
     cat "$config_file"
 }
 
-# Function to build client Docker image
-build_client_image() {
-    local commit_hash=$1
-    local docker_image=$2
-    local docker_build_context=$3
-    local dockerfile_path=$4
-
-    log_info "Building client Docker image: $docker_image"
-
-    # Remove previous image if exists
-    docker rmi -f "$docker_image" 2>/dev/null || true
-
-    # Build Docker image
-    local build_cmd="docker build -t $docker_image"
-    if [ -n "$dockerfile_path" ]; then
-        build_cmd="$build_cmd -f $dockerfile_path"
-    fi
-    build_cmd="$build_cmd $docker_build_context"
-
-    log_info "Running: $build_cmd"
-    if ! eval "$build_cmd" > /tmp/docker_build_${commit_hash}.log 2>&1; then
-        log_error "Docker build failed for commit $commit_hash"
-        tail -30 /tmp/docker_build_${commit_hash}.log
-        return 1
-    fi
-
-    log_success "Docker image built successfully: $docker_image"
-    return 0
+# Function to extract github repo from URL
+# e.g., https://github.com/NethermindEth/nethermind.git -> NethermindEth/nethermind
+extract_github_repo() {
+    local url=$1
+    # Remove .git suffix
+    url="${url%.git}"
+    # Remove https://github.com/ prefix
+    url="${url#https://github.com/}"
+    # Remove http://github.com/ prefix (just in case)
+    url="${url#http://github.com/}"
+    echo "$url"
 }
 
-# Function to build and test a commit
+# Function to test a commit (Hive will build the client from the commit)
 test_commit() {
     local commit_hash=$1
     local commit_date=$2
-    local docker_image=$3
-    local docker_build_context=$4
-    local dockerfile_path=$5
-    local client_name=$6
-    local hive_command=$7
-    local success_string=$8
-    local error_string=$9
-    local timeout_seconds=${10}
+    local github_repo=$3
+    local client_name=$4
+    local hive_command=$5
+    local success_string=$6
+    local error_string=$7
+    local timeout_seconds=$8
 
     log_info "Testing commit: $commit_hash (Date: $commit_date)"
-
-    # Navigate to client repo
-    cd "$CLIENT_REPO_DIR" || return 2
-
-    # Checkout the commit
-    if ! git checkout -q "$commit_hash" 2>&1; then
-        log_error "Failed to checkout commit $commit_hash"
-        # Try force checkout
-        if ! git checkout -f -q "$commit_hash" 2>&1; then
-            log_error "Force checkout also failed for commit $commit_hash"
-            return 2
-        fi
-    fi
-
-    # Build client Docker image
-    if ! build_client_image "$commit_hash" "$docker_image" "$docker_build_context" "$dockerfile_path"; then
-        log_error "Failed to build client image for commit $commit_hash"
-        return 2
-    fi
 
     # Navigate to hive directory
     cd "$HIVE_DIR" || return 2
 
-    # Create config for custom client
-    create_hive_config "$client_name" "$docker_image"
+    # Create config for custom client - Hive will clone and build from this commit
+    create_hive_config "$client_name" "$github_repo" "$commit_hash"
 
     # Run hive tests
     local full_hive_command="$hive_command --client-file configs/custom_client.yaml"
@@ -285,8 +242,9 @@ test_commit() {
     log_info "Last 30 lines of test output:"
     tail -30 "$test_output_file"
 
-    # Cleanup Docker image to save space
-    docker rmi -f "$docker_image" 2>/dev/null || true
+    # Cleanup Docker images built by Hive to save space
+    log_info "Cleaning up Hive-built images..."
+    docker images --filter "reference=hive/clients/${client_name}*" -q | xargs -r docker rmi -f 2>/dev/null || true
 
     if [ "$is_broken" = true ]; then
         log_error "This commit is BROKEN"
@@ -309,9 +267,6 @@ show_usage() {
     log_error "Optional arguments:"
     log_error "  --client-repo-branch <branch> : Client branch to test (default: master)"
     log_error "  --client-name <name>       : Client name for hive (default: nethermind)"
-    log_error "  --docker-image <image>     : Docker image name (default: nethermind:bisect)"
-    log_error "  --docker-build-context <path> : Docker build context path (default: '.')"
-    log_error "  --dockerfile <path>        : Dockerfile path (default: auto-detect)"
     log_error "  --hive-repo-url <url>      : Hive repository URL (default: https://github.com/ethereum/hive.git)"
     log_error "  --hive-branch <branch>     : Hive branch (default: master)"
     log_error "  --repo-token <token>       : GitHub token for private repositories"
@@ -320,6 +275,9 @@ show_usage() {
     log_error "  --success-string <string>  : String that must be present in output for success"
     log_error "  --error-string <string>    : String in output that indicates failure"
     log_error "  --timeout <seconds>        : Timeout for each test run (default: 3600 = 1 hour)"
+    log_error ""
+    log_error "Note: Hive will clone and build the client from each commit being tested."
+    log_error "      The client-repo-url must be a GitHub URL."
     log_error ""
     log_error "Examples:"
     log_error "  $0 --date '2024-10-01' \\"
@@ -347,9 +305,6 @@ main() {
     local client_repo_url=""
     local client_repo_branch="master"
     local client_name="nethermind"
-    local docker_image="nethermind:bisect"
-    local docker_build_context="."
-    local dockerfile_path=""
     local hive_repo_url="https://github.com/ethereum/hive.git"
     local hive_branch="master"
     local repo_token=""
@@ -375,18 +330,6 @@ main() {
                 ;;
             --client-name)
                 client_name="$2"
-                shift 2
-                ;;
-            --docker-image)
-                docker_image="$2"
-                shift 2
-                ;;
-            --docker-build-context)
-                docker_build_context="$2"
-                shift 2
-                ;;
-            --dockerfile)
-                dockerfile_path="$2"
                 shift 2
                 ;;
             --hive-repo-url)
@@ -437,8 +380,16 @@ main() {
         show_usage
     fi
 
-    # Store docker image name globally for cleanup
-    DOCKER_IMAGE_NAME="$docker_image"
+    # Validate that client_repo_url is a GitHub URL
+    if [[ ! "$client_repo_url" =~ ^https://github.com/ ]]; then
+        log_error "client-repo-url must be a GitHub URL (https://github.com/...)"
+        exit 1
+    fi
+
+    # Extract GitHub repo path (e.g., NethermindEth/nethermind)
+    local github_repo
+    github_repo=$(extract_github_repo "$client_repo_url")
+    log_info "Extracted GitHub repo: $github_repo"
 
     # Verify prerequisites
     log_info "Verifying prerequisites..."
@@ -512,11 +463,9 @@ main() {
     log_info "Starting binary search for broken commit"
     log_info "Configuration:"
     log_info "  Client repository: $client_repo_url"
+    log_info "  Client GitHub repo: $github_repo"
     log_info "  Client branch: $client_repo_branch"
     log_info "  Client name: $client_name"
-    log_info "  Docker image: $docker_image"
-    log_info "  Docker build context: $docker_build_context"
-    log_info "  Dockerfile: ${dockerfile_path:-auto-detect}"
     log_info "  Hive repository: $hive_repo_url"
     log_info "  Hive branch: $hive_branch"
     log_info "  Hive command: $hive_command"
@@ -524,6 +473,8 @@ main() {
     log_info "  Success string: '$success_string'"
     log_info "  Error string: '$error_string'"
     log_info "  Date when tests started failing: $start_date"
+    log_info ""
+    log_info "Note: Hive will clone and build client from each commit (no local Docker build)"
 
     # Validate references if provided
     if [ -n "$good_ref" ]; then
@@ -615,7 +566,7 @@ main() {
         echo ""
 
         # Test the commit
-        test_commit "$commit_hash" "$commit_date" "$docker_image" "$docker_build_context" "$dockerfile_path" "$client_name" "$hive_command" "$success_string" "$error_string" "$timeout_seconds"
+        test_commit "$commit_hash" "$commit_date" "$github_repo" "$client_name" "$hive_command" "$success_string" "$error_string" "$timeout_seconds"
         result=$?
 
         echo ""
@@ -659,7 +610,7 @@ main() {
         commit_hash=${COMMITS[$left]}
         commit_date=$(git show -s --format=%ci "$commit_hash")
         log_info "Verifying last potentially GOOD commit..."
-        test_commit "$commit_hash" "$commit_date" "$docker_image" "$docker_build_context" "$dockerfile_path" "$client_name" "$hive_command" "$success_string" "$error_string" "$timeout_seconds"
+        test_commit "$commit_hash" "$commit_date" "$github_repo" "$client_name" "$hive_command" "$success_string" "$error_string" "$timeout_seconds"
         if [ $? -eq 0 ]; then
             last_good_commit=$commit_hash
             log_success "Confirmed: This is the LAST GOOD commit"
@@ -673,7 +624,7 @@ main() {
         commit_hash=${COMMITS[$right]}
         commit_date=$(git show -s --format=%ci "$commit_hash")
         log_info "Verifying first potentially BROKEN commit..."
-        test_commit "$commit_hash" "$commit_date" "$docker_image" "$docker_build_context" "$dockerfile_path" "$client_name" "$hive_command" "$success_string" "$error_string" "$timeout_seconds"
+        test_commit "$commit_hash" "$commit_date" "$github_repo" "$client_name" "$hive_command" "$success_string" "$error_string" "$timeout_seconds"
         if [ $? -eq 1 ]; then
             first_broken_commit=$commit_hash
             log_error "Confirmed: This is the FIRST BROKEN commit"
