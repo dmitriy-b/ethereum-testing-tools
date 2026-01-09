@@ -145,32 +145,15 @@ setup_hive() {
     log_success "Hive setup complete at $HIVE_DIR"
 }
 
-# Function to create hive config and custom Dockerfile for local image
+# Function to create hive config for local image
+# Hive's existing Dockerfiles already support baseimage/tag build args
 create_hive_config() {
     local client_name=$1
     local docker_image=$2
     local config_file="$HIVE_DIR/configs/custom_client.yaml"
-    local dockerfile_dir="$HIVE_DIR/clients/$client_name"
-    local custom_dockerfile="$dockerfile_dir/Dockerfile.localimage"
 
     log_info "Creating Hive config for client: $client_name"
     log_info "  Using local Docker image: $docker_image"
-
-    # Create custom Dockerfile that uses our local image
-    log_info "Creating custom Dockerfile: $custom_dockerfile"
-    cat > "$custom_dockerfile" << 'DOCKERFILE_EOF'
-ARG baseimage
-ARG tag
-FROM ${baseimage}:${tag}
-
-# Hive requires these labels
-LABEL hive.type="client"
-
-# The entry script handles client startup
-DOCKERFILE_EOF
-
-    log_info "Created custom Dockerfile:"
-    cat "$custom_dockerfile"
 
     # Extract image name and tag
     local baseimage="${docker_image%:*}"
@@ -179,10 +162,9 @@ DOCKERFILE_EOF
         tag="latest"
     fi
 
-    # Create config that uses our custom Dockerfile with local image
+    # Create config - Hive's existing Dockerfile supports baseimage/tag
     cat > "$config_file" << EOF
 - client: $client_name
-  dockerfile: localimage
   build_args:
     baseimage: $baseimage
     tag: $tag
