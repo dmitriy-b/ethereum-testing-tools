@@ -50,6 +50,12 @@ cleanup_and_exit() {
     log_info "Cleaning up Hive-built Docker images..."
     docker images --filter "reference=hive/clients/*" -q | xargs -r docker rmi -f 2>/dev/null || true
     docker images --filter "reference=hive/simulators/*" -q | xargs -r docker rmi -f 2>/dev/null || true
+    
+    # Clean dangling images and build cache
+    log_info "Cleaning up Docker build cache and dangling images..."
+    docker image prune -f 2>/dev/null || true
+    docker builder prune -f --all 2>/dev/null || true
+    docker system prune -f 2>/dev/null || true
 
     if [ -n "$ORIGINAL_BRANCH" ] && [ -d "$CLIENT_REPO_DIR" ]; then
         cd "$CLIENT_REPO_DIR"
@@ -331,10 +337,14 @@ test_commit() {
     log_info "Last 30 lines of test output:"
     tail -30 "$test_output_file"
 
-    # Cleanup Docker images to save space
-    log_info "Cleaning up Docker images..."
+    # Cleanup Docker images and build cache to save space
+    log_info "Cleaning up Docker images and build cache..."
     docker rmi -f "$docker_image" 2>/dev/null || true
     docker images --filter "reference=hive/clients/${client_name}*" -q | xargs -r docker rmi -f 2>/dev/null || true
+    # Clean dangling images
+    docker image prune -f 2>/dev/null || true
+    # Clean build cache (this is the main space consumer)
+    docker builder prune -f 2>/dev/null || true
 
     if [ "$is_broken" = true ]; then
         log_error "This commit is BROKEN"
@@ -493,6 +503,13 @@ main() {
 
     # Store docker image name globally for cleanup
     DOCKER_IMAGE_NAME="$docker_image"
+
+    # Initial Docker cleanup to free up space before starting
+    log_info "Initial Docker cleanup to free disk space..."
+    docker system prune -f 2>/dev/null || true
+    docker builder prune -f 2>/dev/null || true
+    log_info "Available disk space:"
+    df -h / 2>/dev/null || df -h . 2>/dev/null || true
 
     # Verify prerequisites
     log_info "Verifying prerequisites..."
