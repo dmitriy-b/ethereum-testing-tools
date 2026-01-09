@@ -1,0 +1,119 @@
+name: Find Broken Hive Commit - Example
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date when it started failing (YYYY-MM-DD)'
+        required: true
+        default: '2024-10-01'
+      hive_command:
+        description: 'Hive command to run'
+        required: true
+        default: './hive --client nethermind --sim ethereum/engine --sim.limit /AccountRange'
+      repo_url:
+        description: 'Hive repository URL'
+        required: false
+        default: 'https://github.com/ethereum/hive.git'
+      repo_branch:
+        description: 'Hive branch to test'
+        required: false
+        default: 'master'
+      good_ref:
+        description: 'Known good commit (optional)'
+        required: false
+        default: ''
+      bad_ref:
+        description: 'Known bad commit (default: HEAD)'
+        required: false
+        default: 'HEAD'
+      error_string:
+        description: 'Error string to search for in logs'
+        required: false
+        default: 'FAIL'
+      timeout:
+        description: 'Timeout in seconds for each test run'
+        required: false
+        default: '3600'
+
+jobs:
+  bisect-hive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 720  # 12 hours max for the entire job
+    
+    steps:
+      - name: Checkout repository (for action)
+        uses: actions/checkout@v4
+      
+      - name: Find broken commit
+        id: find-broken
+        uses: ./.github/actions/find-broken-commit-hive
+        with:
+          date: ${{ github.event.inputs.date }}
+          hive_command: ${{ github.event.inputs.hive_command }}
+          repo_url: ${{ github.event.inputs.repo_url }}
+          repo_branch: ${{ github.event.inputs.repo_branch }}
+          good_ref: ${{ github.event.inputs.good_ref }}
+          bad_ref: ${{ github.event.inputs.bad_ref }}
+          error_string: ${{ github.event.inputs.error_string }}
+          timeout: ${{ github.event.inputs.timeout }}
+      
+      - name: Print results
+        if: always()
+        run: |
+          echo "## Hive Bisect Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: ${{ github.event.inputs.repo_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.event.inputs.repo_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Command: \`${{ github.event.inputs.hive_command }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Date: ${{ github.event.inputs.date }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ steps.find-broken.outputs.last_good_commit }}" ]; then
+            echo "✅ **Last Good Commit:** \`${{ steps.find-broken.outputs.last_good_commit }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "${{ steps.find-broken.outputs.first_broken_commit }}" ]; then
+            echo "❌ **First Broken Commit:** \`${{ steps.find-broken.outputs.first_broken_commit }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**View the breaking commit:** https://github.com/ethereum/hive/commit/${{ steps.find-broken.outputs.first_broken_commit }}" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Create issue on failure
+        if: failure() && steps.find-broken.outputs.first_broken_commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🔍 Hive test regression found: ${context.sha.substring(0, 7)}`;
+            const body = `## Hive Test Regression Found
+            
+            A binary search identified the commit that broke Hive tests.
+            
+            ### Results
+            - ✅ **Last Good Commit:** \`${{ steps.find-broken.outputs.last_good_commit }}\`
+            - ❌ **First Broken Commit:** \`${{ steps.find-broken.outputs.first_broken_commit }}\`
+            
+            ### Configuration
+            - **Repository:** ${{ github.event.inputs.repo_url }}
+            - **Branch:** ${{ github.event.inputs.repo_branch }}
+            - **Command:** \`${{ github.event.inputs.hive_command }}\`
+            - **Date:** ${{ github.event.inputs.date }}
+            
+            ### Links
+            - [View the breaking commit](https://github.com/ethereum/hive/commit/${{ steps.find-broken.outputs.first_broken_commit }})
+            - [Workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+            
+            // Uncomment to automatically create an issue
+            // github.rest.issues.create({
+            //   owner: context.repo.owner,
+            //   repo: context.repo.repo,
+            //   title: title,
+            //   body: body,
+            //   labels: ['hive', 'regression', 'automated']
+            // });
+            
+            console.log('Issue that would be created:');
+            console.log(title);
+            console.log(body);
+
