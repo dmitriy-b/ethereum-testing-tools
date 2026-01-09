@@ -267,8 +267,17 @@ test_commit() {
     # Create config for custom client using local image
     create_hive_config "$client_name" "$docker_image"
 
+    # Check if --docker.pull is in the command and warn/remove it
+    local cleaned_hive_command="$hive_command"
+    if [[ "$hive_command" == *"--docker.pull"* ]]; then
+        log_warning "Removing --docker.pull from hive command (incompatible with local images)"
+        cleaned_hive_command="${hive_command//--docker.pull/}"
+        # Clean up any double spaces
+        cleaned_hive_command=$(echo "$cleaned_hive_command" | tr -s ' ')
+    fi
+
     # Run hive tests
-    local full_hive_command="$hive_command --client-file configs/custom_client.yaml"
+    local full_hive_command="$cleaned_hive_command --client-file configs/custom_client.yaml"
     log_info "Running hive command: $full_hive_command"
 
     local test_output_file="/tmp/commit_${commit_hash}_logs.txt"
@@ -362,6 +371,9 @@ show_usage() {
     log_error ""
     log_error "Flow: For each commit, the script builds a Docker image locally, then runs Hive"
     log_error "      tests against that image using a custom Dockerfile."
+    log_error ""
+    log_error "Note: --docker.pull in hive command is automatically removed (incompatible with"
+    log_error "      local images). Other images (simulators, etc.) won't be pulled either."
     log_error ""
     log_error "Examples:"
     log_error "  $0 --date '2024-10-01' \\"
