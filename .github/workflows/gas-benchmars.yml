@@ -3,10 +3,6 @@ name: Run gas benchmarks
 on:
   workflow_dispatch:
     inputs:
-      runs:
-        description: Number of benchmark runs
-        required: false
-        default: '1'
       testPath:
         description: Path to test files
         required: false
@@ -43,6 +39,10 @@ on:
         description: PostgreSQL table name
         required: false
         default: 'gas_benchmarks_ci'
+      compareHashes:
+        description: 'Capture and compare Engine API request hashes across clients (true/false)'
+        required: false
+        default: 'false'
 
 jobs:
   gas-benchmarks:
@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NethermindEth/gas-benchmarks
-          ref: main                         # <--- IMPORTANT: Specify the branch/tag you want!
+          ref: feat/hash-comparision                         # <--- IMPORTANT: Specify the branch/tag you want!
           lfs: true                         # <--- Keeps LFS files correct
 
       - name: Run gas-benchmarks composite action
@@ -64,7 +64,7 @@ jobs:
           genesisFile: ${{ github.event.inputs.genesisFile }}
           warmupFile: ${{ github.event.inputs.warmupFile }}
           clients: ${{ github.event.inputs.clients }}
-          runs: ${{ github.event.inputs.runs }}
+          runs: '1'
           opcodeWarmupCount: '1'
           filter: ${{ github.event.inputs.filter }}
           images: '{"nethermind":"default","geth":"default","reth":"default","erigon":"default","besu":"default","nimbus":"default","ethrex":"default"}'
@@ -78,3 +78,4 @@ jobs:
           # DB credentials passed from your repository secrets
           postgresUser: ${{ secrets.PERFNET_DB_USER }}
           postgresPassword: ${{ secrets.PERFNET_DB_PASSWORD }}
+          compareHashes: ${{ github.event.inputs.compareHashes }}
