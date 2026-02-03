@@ -1,0 +1,81 @@
+name: gas-benchmark-compare-action
+
+on:
+  workflow_dispatch:
+    inputs:
+      vmImage:
+        description: 'GitHub-hosted runner image (e.g. ubuntu-latest, ubuntu-24.04)'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+      testPath:
+        description: 'Path to benchmark tests inside the gas-benchmarks repo'
+        required: false
+        type: string
+        default: 'eest_tests'
+      genesisFile:
+        description: 'Genesis filename used for all clients (under scripts/genesisfiles/<client>/)'
+        required: false
+        type: string
+        default: 'zkevmgenesis.json'
+      warmupFile:
+        description: 'Warmup file path; set to empty string to disable warmup'
+        required: false
+        type: string
+        default: 'warmup/warmup-1000bl-16wi-24tx.txt'
+      clients:
+        description: 'Comma-separated list of clients to benchmark'
+        required: false
+        type: string
+        default: 'nethermind'
+      runs:
+        description: 'Number of benchmark runs to execute per image set'
+        required: false
+        type: number
+        default: 1
+      opcodeWarmupCount:
+        description: 'Number of opcode warmup iterations per test case'
+        required: false
+        type: number
+        default: 1
+      filter:
+        description: 'Comma-separated include-only filename patterns for stateful scenarios'
+        required: false
+        type: string
+        default: ''
+      baselineConfig:
+        description: 'JSON config for baseline run: {"images": {"client":"image:tag"}, "label": "Name"}'
+        required: true
+        type: string
+      comparisonConfig:
+        description: 'JSON config for comparison run: {"images": {"client":"image:tag"}, "label": "Name"}'
+        required: true
+        type: string
+
+jobs:
+  run-comparison:
+    name: Run gas-benchmark comparison
+    runs-on: ${{ inputs.vmImage }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout gas-benchmarks repository
+        uses: actions/checkout@v4
+        with:
+          repository: NethermindEth/gas-benchmarks
+          ref: feat/compare-runs-action                        # <--- IMPORTANT: Specify the branch/tag you want!
+          lfs: true
+
+      - name: Run gas-benchmark comparison action
+        uses: ./.github/actions/gas-benchmark-compare-action
+        with:
+          testPath: ${{ inputs.testPath }}
+          genesisFile: ${{ inputs.genesisFile }}
+          warmupFile: ${{ inputs.warmupFile }}
+          clients: ${{ inputs.clients }}
+          runs: ${{ inputs.runs }}
+          opcodeWarmupCount: ${{ inputs.opcodeWarmupCount }}
+          filter: ${{ inputs.filter }}
+          baselineConfig: ${{ inputs.baselineConfig }}
+          comparisonConfig: ${{ inputs.comparisonConfig }}
