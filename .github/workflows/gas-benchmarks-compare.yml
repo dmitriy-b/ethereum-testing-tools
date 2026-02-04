@@ -79,3 +79,4 @@ jobs:
           filter: ${{ inputs.filter }}
           baselineConfig: ${{ inputs.baselineConfig }}
           comparisonConfig: ${{ inputs.comparisonConfig }}
+          metrics: np,duration
