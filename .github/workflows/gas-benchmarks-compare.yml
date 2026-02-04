@@ -33,11 +33,6 @@ on:
         required: false
         type: number
         default: 1
-      opcodeWarmupCount:
-        description: 'Number of opcode warmup iterations per test case'
-        required: false
-        type: number
-        default: 1
       filter:
         description: 'Comma-separated include-only filename patterns for stateful scenarios'
         required: false
@@ -51,6 +46,11 @@ on:
         description: 'JSON config for comparison run: {"images": {"client":"image:tag"}, "label": "Name"}'
         required: true
         type: string
+      metrics:
+        description: 'Comma-separated list of metrics to capture'
+        required: false
+        type: string
+        default: 'np,duration'
 
 jobs:
   run-comparison:
@@ -75,8 +75,8 @@ jobs:
           warmupFile: ${{ inputs.warmupFile }}
           clients: ${{ inputs.clients }}
           runs: ${{ inputs.runs }}
-          opcodeWarmupCount: ${{ inputs.opcodeWarmupCount }}
+          opcodeWarmupCount: 1
           filter: ${{ inputs.filter }}
           baselineConfig: ${{ inputs.baselineConfig }}
           comparisonConfig: ${{ inputs.comparisonConfig }}
-          metrics: np,duration
+          metrics: ${{ inputs.metrics }}
