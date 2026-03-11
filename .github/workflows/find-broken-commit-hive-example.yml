@@ -6,7 +6,7 @@ on:
       date:
         description: 'Date when it started failing (YYYY-MM-DD)'
         required: true
-        default: '2024-10-01'
+        default: '2026-03-01'
       client_repo_url:
         description: 'Client GitHub repository URL to bisect'
         required: true
