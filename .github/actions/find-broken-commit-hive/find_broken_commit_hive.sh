@@ -155,6 +155,9 @@ create_hive_config() {
     log_info "Creating Hive config for client: $client_name"
     log_info "  Using local Docker image: $docker_image"
 
+    # Ensure configs directory exists
+    mkdir -p "$(dirname "$config_file")"
+
     # Extract image name and tag
     local baseimage="${docker_image%:*}"
     local tag="${docker_image##*:}"
